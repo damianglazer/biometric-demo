@@ -1,6 +1,9 @@
 import { server } from '@passwordless-id/webauthn';
 import { createClient } from '@supabase/supabase-js'
 
+import crypto from "node:crypto"
+globalThis.crypto ??= crypto.webcrypto
+
 
 export default defineEventHandler(async (event) => {
 
@@ -18,7 +21,7 @@ export default defineEventHandler(async (event) => {
     process.env.SUPABASE_ANON_KEY ?? ''
   )
 
-const { data, error } = await supabase
+const { data } = await supabase
   .from('users')
   .select()
   .eq('credential_id', body.credentialId)
