@@ -1,31 +1,37 @@
-import fs from 'node:fs';
-import { createResolver } from '@nuxt/kit';
 import { server } from '@passwordless-id/webauthn';
-import crypto from 'node:crypto';
+import { createClient } from '@supabase/supabase-js'
+
 
 export default defineEventHandler(async (event) => {
 
-  const resolver = createResolver(import.meta.url);
   const body = await readBody(event);
 
   const expected = {
     challenge: body.challenge,
     origin:
-      'https://biometric-demo.vercel.app',
+      process.env.CREDENTIAL_URL ?? '',
     userVerified: true,
   };
 
-  const db = JSON.parse(
-    fs.readFileSync(resolver.resolve('../../db/static.json'), 'utf8')
-  );
+  const supabase = createClient(
+    process.env.SUPABASE_URL ?? '',
+    process.env.SUPABASE_ANON_KEY ?? ''
+  )
 
-  const data = db[body.credentialId];
+const { data, error } = await supabase
+  .from('users')
+  .select()
+  .eq('credential_id', body.credentialId)
+  .limit(1)
+  .single()
+
+  const {email, ...credential} = JSON.parse(data.credential)
 
   const authenticationParsed = await server.verifyAuthentication(
     body,
-    data.credential,
+    credential,
     expected
   );
 
-  return {...authenticationParsed, email: data.email};
+  return {...authenticationParsed, email };
 });

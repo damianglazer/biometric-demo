@@ -1,9 +1,7 @@
-import fs from 'node:fs';
-import { createResolver } from '@nuxt/kit';
 import { server } from '@passwordless-id/webauthn';
+import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {
-  const resolver = createResolver(import.meta.url);
   const body = await readBody(event);
 
   // 1. Valid time for challenge token
@@ -11,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const expected = {
     challenge: body.challenge,
     origin:
-      'https://biometric-demo.vercel.app',
+      process.env.CREDENTIAL_URL ?? ''
   };
 
   // 2. verify
@@ -20,18 +18,15 @@ export default defineEventHandler(async (event) => {
 
   // *** 3. Save credential for db ***
 
-  const db = JSON.parse(
-    fs.readFileSync(resolver.resolve('../../db/static.json'), 'utf8')
-  );
+   const supabase = createClient(
+    process.env.SUPABASE_URL ?? '',
+    process.env.SUPABASE_ANON_KEY ?? ''
+  )
 
-  db[body.credential.id] = {credential: registrationParsed.credential, email: body.email};
+  await supabase
+    .from('users')
+    .insert({ credential_id: body.credential.id, credential:  JSON.stringify({...registrationParsed.credential, email: body.email})})
 
-  fs.writeFile(
-    resolver.resolve('../../db/static.json'),
-    JSON.stringify(db),
-    'utf8',
-    () => {}
-  );
   // ***
 
   return registrationParsed;
