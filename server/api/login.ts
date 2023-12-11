@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const expected = {
     challenge: body.challenge,
     origin:
-      'http://localhost:3000',
+      'https://biometric-demo.vercel.app',
     userVerified: true,
   };
 
